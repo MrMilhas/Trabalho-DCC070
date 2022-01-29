@@ -3,9 +3,11 @@
 
 #include <iostream>
 #include <string.h>
+#include <bitset>
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <math.h>
 #include <stdio.h>
 
 using namespace std;
@@ -35,11 +37,10 @@ int converteBin(string bin){
  * @brief        Função auxiliar para ler o arquivo com os bits de informações.
  * 
  * @param arq    Arquivo que será lido.
- * @return int*  Retorna o vetor memória com todos os valores armazenados.
+ * @param memoria Array onde cada posicao contera uma instrucao  
  */
-int *lerArquivo(fstream &arq){
+void lerArquivo(fstream &arq, bitset<32> memoria[] ){
     string aux;    // String auxiliar para captura da linha;
-    int *memoria;  // Vetor memória para armazenar os valores lidos;
     int i = 0;     // Inteiro para controle de índices do vetor;
 
     arq.seekg(0);  // Posicionando ponteiro no início do arquivo;
@@ -51,7 +52,6 @@ int *lerArquivo(fstream &arq){
         memoria[i] = converteBin(aux);  // Armazena o valor convertido no vetor memória;
         i++;
     }
-    return memoria;  // Retorna o vetor memória;
 }
 
 #endif
