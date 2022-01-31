@@ -8,15 +8,6 @@
 
 using namespace std;
 
-//Variaveis Globais
-
-bitset<32> memoria[512]; //array que contem em cada posicao contem uma instrucao
-
-bitset<32> registradores[32]; //array que contem em cada posicao um registrador, o array todo corresponde ao banco de registradores
-
-//Sinais de Controle do Pipeline
-int regDst, aluOp1, aluOp0, aluSrc, branch, memRead, memWrite, regWrite, memToReg; 
-
 /**
  * @brief         Função para verificar a existência do arquivo contendo as instruções.
  * 
@@ -79,7 +70,7 @@ void menu(){
                     cout << "Iniciando criação automática do arquivo: " << endl;
                 }
                 else{
-                    fstream arq(dir);
+                    fstream arq(dir+"/instrucoes.txt", ios::in);
                     lerArquivo(arq, memoria);
                     
                 }
@@ -106,23 +97,8 @@ void menu(){
  * @return int 0.
  */
 int main(){
-    stateStruct state = {
-        IF,
-        ID,
-        EX ,
-        MEM,
-        WB,
-    };
-        
-    stateStruct newState = state;
-        
-	bitset<32> Instruction;
-	bitset<32> Instr;    
-	string opcode;
-	string func; 
-	bitset<5> Rs;
-	bitset<5> Rt;
-	bitset<5> Rd; 
-    bitset<16> Imm;
+
+    
+	return 0;
 
 }
