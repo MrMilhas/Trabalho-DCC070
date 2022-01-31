@@ -44,7 +44,7 @@ struct etapaIF {
 };
 
 struct etapaID {
-    bitset<32>  Instrucao;  // Bitiset para armazenar a instrução;
+    bitset<32>  instrucao;  // Bitiset para armazenar a instrução;
     bool        nop;        // Variável para tratamento dos Hazzards;
 };
 
@@ -58,7 +58,7 @@ struct etapaEX {
     bool        tipo_I;        // Booleano para verificar se a intrução é do tipo I;
     bool        memRead;       // Sinal de controle MemRead;
     bool        memWrite;      // Sinal de controle MemWrite;
-    bool        aluOp;         // Sinal de controle AluOp; 
+    bitset<2>   aluOp;         // Sinal de controle AluOp; 
     bool        regWrite;      // Sinal de controle RegWrite;
     bool        nop;           // Variável para tratamento dos Hazzards;
     string      INS;           // Nome da intrução;
@@ -122,7 +122,7 @@ void pipeline(){
 	bitset<5> rs;                  // Registrador rs;
 	bitset<5> rt;                  // Registrador rt;
 	bitset<5> rd;                  // Registrador rd;
-    bitset<16> Immediate;          // Immediate das instruções do tipo I;
+    bitset<16> immediate;          // Immediate das instruções do tipo I;
 
     //? Inicia no ciclo de clock 0;
     int cycle = 0;
@@ -250,7 +250,7 @@ void pipeline(){
         //? Etapa ID ------------------------------------------------------------------------------------------------------------------
         if (state.ID.nop == 0){
 
-            Instr = state.ID.Instr;
+            Instr = state.ID.instrucao;
             opcode = Instr.to_string().substr(0,6);		//decode instruction
             func = Instr.to_string().substr(26,6);
 
@@ -263,7 +263,7 @@ void pipeline(){
             newState.EX.regB = registradores[rt.to_ulong()];
             
             immediate = bitset<16>(Instr.to_string().substr(16,16)); 
-            newState.EX.Immediate = Immediate;
+            newState.EX.Immediate = immediate;
             
             rd = bitset<5>(Instr.to_string().substr(16,5));  
             
@@ -271,20 +271,39 @@ void pipeline(){
                 newState.EX.endereco = rd; 
                 
                 newState.EX.tipo_I = 0;
-                
-                if (func == "100001"){
-                    newState.EX.INS = "addu";                    
-                    newState.EX.aluOp = 1;     
+
+                if(func == "100000"){
+                    newState.EX.INS = "add";
+                    newState.EX.aluOp = bitset<2>("10");
                 }
-                
-                else if (func == "100011"){
-                    newState.EX.INS = "subu";                    
-                    newState.EX.aluOp = 0;      
-                }
-                
-                newState.EX.regWrite = 1;
-                newState.EX.memRead = 0;
-                newState.EX.memWrite = 0;                 
+                else{
+                    if(func == "100010"){
+                        newState.EX.INS = "subtract";
+                        newState.EX.aluOp = bitset<2>("10");
+                    }
+                    else{
+                        if(func == "100100"){
+                            newState.EX.INS = "AND";
+                            newState.EX.aluOp = bitset<2>("10");
+                        }
+                        else{
+                            if(func == "100101"){
+                                newState.EX.INS = "OR";
+                                newState.EX.aluOp = bitset<2>("10");
+                            }
+                            else{
+                                if(func == "101010"){
+                                    newState.EX.INS = "slt";
+                                    newState.EX.aluOp = bitset<2>("10");
+                                }
+                                else{
+                                    newState.EX.INS = "sll";
+                                    newState.EX.aluOp = bitset<2>("10");
+                                }
+                            }
+                        }
+                    }
+                }              
             }            
 
             else if (opcode == "100011"){
@@ -293,7 +312,7 @@ void pipeline(){
                 newState.EX.endereco = rt;
                 
                 newState.EX.tipo_I = 1;               
-                newState.EX.aluOp = 1;
+                newState.EX.aluOp = bitset<2>("01");
                 newState.EX.regWrite = 1;                
                 newState.EX.memRead = 1;
                 newState.EX.memWrite = 0;                      
@@ -305,7 +324,7 @@ void pipeline(){
                 newState.EX.endereco = rt;
 
                 newState.EX.tipo_I = 1;                
-                newState.EX.aluOp = 1;
+                newState.EX.aluOp = bitset<2>("01");;
                 newState.EX.regWrite = 0;                
                 newState.EX.memRead = 0;
                 newState.EX.memWrite = 1;                 
@@ -317,7 +336,47 @@ void pipeline(){
                 newState.EX.endereco = 0;
                 
                 newState.EX.tipo_I = 1;
-                newState.EX.aluOp = 1;
+                newState.EX.aluOp = bitset<2>("01");;
+                newState.EX.regWrite = 0;
+                newState.EX.memRead = 0;
+                newState.EX.memWrite = 0; 
+
+                bitset<32> aux1 = registradores[rs.to_ulong()];
+                bitset<32> aux2 = registradores[rt.to_ulong()];
+                
+                if (aux1 == aux2){
+
+                    cout<<"Branch not taken"<<endl;
+                    newState.EX.nop = 0;
+                    newState.ID.nop = 1;
+                    
+                    newState.IF.PC = state.IF.PC.to_ulong() + bitset<30>(sign_extend(immediate).to_string().substr(2,30)).to_ulong()*4;
+                    newState.IF.nop = 0;
+                    
+                    //printState(newState, cycle);     
+                    state = newState;
+                    cycle ++;
+                    
+                    continue;                                       
+                }
+                cout<<"Branch taken"<<endl;
+            }
+            else if (opcode == "001000"){
+                newState.EX.INS = "addi";
+
+                newState.EX.tipo_I = 1;
+                newState.EX.aluOp = bitset<2>("00");
+                newState.EX.regWrite = 1;
+                newState.EX.memRead = 0;
+                newState.EX.memWrite = 0; 
+            }
+            else if (opcode == "000101"){
+                newState.EX.INS = "bne";
+                
+                newState.EX.endereco = 0;
+                
+                newState.EX.tipo_I = 1;
+                newState.EX.aluOp = bitset<2>("01");;
                 newState.EX.regWrite = 0;
                 newState.EX.memRead = 0;
                 newState.EX.memWrite = 0; 
@@ -331,7 +390,7 @@ void pipeline(){
                     newState.EX.nop = 0;
                     newState.ID.nop = 1;
                     
-                    newState.IF.PC = state.IF.PC.to_ulong() + bitset<30>(sign_extend(Imm).to_string().substr(2,30)).to_ulong()*4;
+                    newState.IF.PC = state.IF.PC.to_ulong() + bitset<30>(sign_extend(immediate).to_string().substr(2,30)).to_ulong()*4;
                     newState.IF.nop = 0;
                     
                     //printState(newState, cycle);     
@@ -339,10 +398,39 @@ void pipeline(){
                     cycle ++;
                     
                     continue;                                       
-                } 
-                
+                }
                 cout<<"Branch taken"<<endl;
             }
+            else if (opcode == "000010"){
+                newState.EX.INS = "jump";
+
+                newState.EX.tipo_I = 0;
+                newState.EX.regWrite = 0;
+                newState.EX.memRead = 0;
+                newState.EX.memWrite = 0;
+
+                //newState.IF.PC = 
+            }
+            else if (opcode == "000011"){
+                newState.EX.INS = "jump and link";
+
+                newState.EX.tipo_I = 0;
+                newState.EX.regWrite = 0;
+                newState.EX.memRead = 0;
+                newState.EX.memWrite = 0;
+
+                //newState.IF.PC =
+            }
+            else {
+                newState.EX.INS = "jump register";
+
+                newState.EX.tipo_I = 0;
+                newState.EX.regWrite = 0;
+                newState.EX.memRead = 0;
+                newState.EX.memWrite = 0;
+
+                //newState.IF.PC =
+            } 
             
             if ((state.EX.nop == 0) && (state.EX.memRead == 1)){
 
@@ -384,7 +472,7 @@ void pipeline(){
                 //cout<<"PC:\t"<<state.IF.PC<<endl;                
             }
             
-            newState.ID.Instr = Instruction;            
+            newState.ID.instrucao = Instruction;            
         }
         newState.ID.nop = state.IF.nop;
 
