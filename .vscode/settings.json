@@ -2,6 +2,8 @@
     "files.associations": {
         "bitset": "cpp",
         "iosfwd": "cpp",
-        "xiosbase": "cpp"
+        "xiosbase": "cpp",
+        "iostream": "cpp",
+        "xstring": "cpp"
     }
 }
