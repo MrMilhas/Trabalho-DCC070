@@ -3,6 +3,7 @@
 #include<vector>
 #include<bitset>
 #include<fstream>
+#include "auxiliar.h"
 
 
 using namespace std;
@@ -10,12 +11,11 @@ using namespace std;
 //Variaveis Globais
 
 bitset<32> memoria[512];      //Array que contem em cada posicao contem uma instrucao
-bitset<8> dataMem[512];       //Array para a memoria de dados.
 
-bitset<32> registradores[32]; //Array que contem em cada posicao um registrador, o array todo corresponde ao banco de registradores
+bitset<32> registradores[32]; //Array que contem em cada posicao um registrador, o array todo corresponde ao banco de registradores 
 
-//Sinais de Controle do Pipeline
-int regDst, aluOp1, aluOp0, aluSrc, branch, memRead, memWrite, regWrite, memToReg; 
+//? Inicia no ciclo de clock 0;
+int cycle;
 
 bitset<32> sign_extend(bitset<16> Imm)
 {
@@ -24,13 +24,11 @@ bitset<32> sign_extend(bitset<16> Imm)
     string immediate = Imm.to_string();
     bitset<32> se_imm;
     
-    if (immediate.substr(0,1) == "0")							//sign extention
-    {
+    if (immediate.substr(0,1) == "0"){
         se0 += immediate;
         se_imm = bitset<32>(se0);
     }					
-    else
-    {
+    else{
         se1.append(immediate);
         se_imm = bitset<32>(se1);				
     }
@@ -61,7 +59,7 @@ struct etapaEX {
     bitset<2>   aluOp;         // Sinal de controle AluOp; 
     bool        regWrite;      // Sinal de controle RegWrite;
     bool        nop;           // Variável para tratamento dos Hazzards;
-    string      INS;           // Nome da intrução;
+    string      nome;          // Nome da intrução;
 };
 
 struct etapaMEM {
@@ -74,7 +72,7 @@ struct etapaMEM {
     bool        memWrite;         // Sinal de controle MemWrite;
     bool        regWrite;         // Sinal de controle RegWrite;
     bool        nop;              // Variável para tratamento dos Hazzards;
-    string      INS;              // Nome da intrução;
+    string      nome;             // Nome da intrução;
 };
 
 struct etapaWB {
@@ -84,10 +82,10 @@ struct etapaWB {
     bitset<5>   endereco;      // Endereço de memória para auxiliar leitura e escrita;
     bool        regWrite;      // Sinal de controle RegWrite;
     bool        nop;           // Variável para tratamento dos Hazzards;
-    string      INS;           // Nome da intrução;
+    string      nome;          // Nome da intrução;
 };
 
-struct stateStruct {
+struct ciclo {
     etapaIF    IF;   // Etapa 1;
     etapaID    ID;   // Etapa 2;
     etapaEX    EX;   // Etapa 3;
@@ -96,27 +94,98 @@ struct stateStruct {
 };
 
 //?------------------------------------------------------------------------------------------------------------------------------------
+void imprimePipeLine(ciclo clockAtual){
+    ofstream outfile ("outfile.txt");
+
+    outfile << "Ciclo de clock atual: " << cycle << endl;
+    outfile << "Conteúdo do Banco de Registradores: " << endl;
+    outfile << endl;
+
+    for(int i = 0; i < 32; i++){
+        outfile << "[" << i << "]: " << registradores[i] << endl;
+    }
+    outfile << endl;
+
+    //if(clockAtual.IF.nop == 0){
+        outfile << "PC: " << clockAtual.IF.PC << endl;
+        outfile << endl;
+    //}
+
+    //if(clockAtual.ID.nop == 0){
+        outfile << "------------- Etapa ID (Decodificação da Instrução) ------------- " << endl;
+        outfile << "Instrução: " << clockAtual.ID.instrucao << endl;
+        outfile << endl;
+    //}
+
+    //if(clockAtual.EX.nop == 0){
+        outfile << "------------- Etapa EX (Execução/Cálculo do Endereço) ------------- " << endl;
+        outfile << "Instrução: " << clockAtual.EX.nome << endl;
+        outfile << "Rs: " << clockAtual.EX.rs << endl;
+        outfile << "Rt: " << clockAtual.EX.rt << endl;
+        outfile << "Rd: " << clockAtual.EX.endereco << endl;
+        outfile << "MemRead: " << clockAtual.EX.memRead << endl;
+        outfile << "MemWrite: " << clockAtual.EX.memWrite << endl;
+        outfile << "Aluop: " << clockAtual.EX.aluOp << endl;
+        outfile << "RegWrite: " << clockAtual.EX.regWrite << endl;
+        outfile << endl;
+    //}
+
+    //if(clockAtual.MEM.nop == 0){
+        outfile << "------------- Etapa MEM (Acesso à Memória de Dados) ------------- " << endl;
+        outfile << "Instrução: " << clockAtual.MEM.nome << endl;
+        outfile << "Rs: " << clockAtual.MEM.rs << endl;
+        outfile << "Rt: " << clockAtual.MEM.rt << endl;
+        outfile << "Rd: " << clockAtual.MEM.endereco << endl;
+        outfile << "MemRead: " << clockAtual.MEM.memRead << endl;
+        outfile << "MemWrite: " << clockAtual.MEM.memWrite << endl;
+        outfile << "RegWrite: " << clockAtual.MEM.regWrite << endl;
+        outfile << endl;
+    //}
+
+    //if(clockAtual.WB.nop == 0){
+        outfile << "------------- Etapa WB (Escrita do Resultado) ------------- " << endl;
+        outfile << "Instrução: " << clockAtual.WB.nome << endl;
+        outfile << "Rs: " << clockAtual.WB.rs << endl;
+        outfile << "Rt: " << clockAtual.WB.rt << endl;
+        outfile << "Rd: " << clockAtual.WB.endereco << endl;
+        outfile << "RegWrite: " << clockAtual.WB.regWrite << endl;
+        outfile << endl;
+    //}
+
+    outfile << "___________________________________________________________________________________________" << endl;
+    outfile.close();
+}
+
+
+//?------------------------------------------------------------------------------------------------------------------------------------
 
 void pipeline(){
 
-    //? Inicializando etapas do pipeline com seus respectivos sinais de controle;
-    etapaIF IF = {0, 0};                                     // Nop == 0 para iniciar a primeira instrução;
-    
-    etapaID ID = {0, 1};                                     // Nop == 1 para iniciar a primeira instrução;
-    
-    etapaEX EX = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, "X"};  // Nop == 1 para iniciar a primeira instrução;
-    
-    etapaMEM MEM = {0, 0, 0, 0, 0, 0, 0, 0, 1, "X"};         // Nop == 1 para iniciar a primeira instrução;
+    //opcao = 1;
 
-    etapaWB WB = {0, 0, 0, 0, 0, 1, "X"};                    // Nop == 1 para iniciar a primeira instrução;
+    //memoria[0] = bitset<32>(bits);
+    
+    //? Inicializando etapas do pipeline com seus respectivos sinais de controle;
+    etapaIF IF = {0, 0};                                              // Nop == 0 para iniciar a primeira instrução;
+    
+    etapaID ID = {0, 1};                                              // Nop == 1 para iniciar a primeira instrução;
+    
+    etapaEX EX = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, "Indefinida"};  // Nop == 1 para iniciar a primeira instrução;
+    
+    etapaMEM MEM = {0, 0, 0, 0, 0, 0, 0, 0, 1, "Indefinida"};         // Nop == 1 para iniciar a primeira instrução;
+
+    etapaWB WB = {0, 0, 0, 0, 0, 1, "Indefinida"};                    // Nop == 1 para iniciar a primeira instrução;
 
     //? Inicializando estrutura de auxílio para as etapas do pipeline;
-    stateStruct state = {IF, ID, EX, MEM, WB};  
-    stateStruct newState = state;
+    //clockAtualStruct clockAtual = {IF, ID, EX, MEM, WB};  
+    //clockAtualStruct novoClock = clockAtual;
+
+    ciclo clockAtual = {IF, ID, EX, MEM, WB};
+    ciclo novoClock = clockAtual;
     
     //? Declarando variáveis auxiliares para etapas do pipeline;
 	bitset<32> Instruction;        // Variável para armazenar a instrução;
-	bitset<32> Instr;              // 
+	bitset<32> Instr;              // Variável auxiliar para instrução;
 	string opcode;                 // Opcode da instrução;
 	string func;                   // Campo Func;
 	bitset<5> rs;                  // Registrador rs;
@@ -124,181 +193,100 @@ void pipeline(){
 	bitset<5> rd;                  // Registrador rd;
     bitset<16> immediate;          // Immediate das instruções do tipo I;
 
-    //? Inicia no ciclo de clock 0;
-    int cycle = 0;
+    cycle = 0;
 
     //? Começando execução do pipeline;
     while(1){
-        //? Etapa WB ------------------------------------------------------------------------------------------------------------------
-        // Se WB está ociosa, 
-        if (0 == state.WB.nop){
-            if (1 == state.WB.regWrite){
-                registradores[state.WB.endereco.to_ulong()] = state.WB.info; 
-            }         
-        }
 
-        //? Etapa MEM ------------------------------------------------------------------------------------------------------------------
-        if (state.MEM.nop == 0){
-            if (state.MEM.memRead == 1){
+        //? Etapa IF ------------------------------------------------------------------------------------------------------------------
+        if (clockAtual.IF.nop == 0){
 
-                string datamem;
-                datamem.append(dataMem[state.MEM.resultadoALU.to_ulong()].to_string());
-                datamem.append(dataMem[state.MEM.resultadoALU.to_ulong()+1].to_string());
-                datamem.append(dataMem[state.MEM.resultadoALU.to_ulong()+2].to_string());
-                datamem.append(dataMem[state.MEM.resultadoALU.to_ulong()+3].to_string());
+            Instruction = memoria[clockAtual.IF.PC.to_ulong()/4];         
 
-                newState.WB.info = bitset<32>(datamem);
+            if (Instruction != 0){
+
+                novoClock.IF.PC = clockAtual.IF.PC.to_ulong() + 4;
+                novoClock.IF.nop = 0;                               
             }
-            else if (state.MEM.memWrite == 1){
+            else{
 
-                if ((state.WB.nop == 0) && (state.WB.regWrite == 1) && (state.WB.endereco == state.MEM.rt)){
-
-                    state.MEM.data_forwarding = state.WB.info;    
-                    cout<<"MEM-MEM sw Forwarding"<<endl;
-                }
+                clockAtual.IF.nop = 1;
                 
-                dataMem[state.MEM.resultadoALU.to_ulong()] = bitset<8>(state.MEM.data_forwarding.to_string().substr(0,8));
-                dataMem[state.MEM.resultadoALU.to_ulong()+1] = bitset<8>(state.MEM.data_forwarding.to_string().substr(8,8));
-                dataMem[state.MEM.resultadoALU.to_ulong()+2] = bitset<8>(state.MEM.data_forwarding.to_string().substr(16,8));
-                dataMem[state.MEM.resultadoALU.to_ulong()+3] = bitset<8>(state.MEM.data_forwarding.to_string().substr(24,8));
-
-                newState.WB.info = state.MEM.data_forwarding;
+                novoClock.IF.PC = clockAtual.IF.PC.to_ulong();                
+                novoClock.IF.nop = 1;                
             }
-            else if (state.MEM.regWrite == 1){
-
-                newState.WB.info = state.MEM.resultadoALU;
-            }   
-
-            newState.WB.rs = state.MEM.rs;
-            newState.WB.rt = state.MEM.rt;             
-            newState.WB.endereco = state.MEM.endereco;                      
-            newState.WB.regWrite = state.MEM.regWrite;             
+            
+            novoClock.ID.instrucao = Instruction;            
         }
-        newState.WB.nop = state.MEM.nop;  
-        newState.WB.INS = state.MEM.INS;
+        novoClock.ID.nop = clockAtual.IF.nop;
+        clockAtual = novoClock;
 
-        //? Etapa EX ------------------------------------------------------------------------------------------------------------------
-        if (state.EX.nop == 0)
-        {    
-            // Verifica se vai escrever em Rs               
-            if ((state.WB.nop == 0) && (state.WB.regWrite == 1) && (state.WB.endereco == state.EX.rs)){
-
-                state.EX.regA = state.WB.info;
-                cout<<"MEM-EX Rs Forwarding"<<endl;
-            }
-            
-            // Verifica se vai escrever em Rt
-            if ((state.WB.nop == 0) && (state.WB.regWrite == 1) && (state.WB.endereco == state.EX.rt)){
-
-                if (((state.EX.tipo_I == 0) && (state.EX.regWrite == 1)) || (state.EX.memWrite == 1)){
-
-                    state.EX.regB = state.WB.info;
-                    cout<<"MEM-EX Rt Forwarding"<<endl;                
-                }
-            }
-            
-            
-            if ((state.MEM.nop == 0) && (state.MEM.memRead == 0) && (state.MEM.memWrite == 0) && (state.MEM.regWrite == 1) && (state.MEM.endereco == state.EX.rs)){ 
-
-                state.EX.regA = state.MEM.resultadoALU;
-                cout<<"EX-EX Rs Forwarding"<<endl;
-            }
-            
-            
-            if ((state.MEM.nop == 0) && (state.MEM.memRead == 0) && (state.MEM.memWrite == 0) && (state.MEM.regWrite == 0) && (state.MEM.endereco == state.EX.rt)){
-
-                if ((state.EX.tipo_I == 0) && (state.EX.regWrite == 1)){
-
-                    state.EX.regB = state.MEM.resultadoALU;
-                    cout<<"EX-EX Rt Forwarding"<<endl; 
-                }
-            }            
-            
-            if (state.EX.tipo_I == 0){
-
-                if (state.EX.regWrite == 1){
-
-                    if (state.EX.aluOp == 1){
-
-                        newState.MEM.resultadoALU = state.EX.regA.to_ulong() + state.EX.regB.to_ulong();               
-                    }
-                    else if (state.EX.aluOp == 0){
-
-                        newState.MEM.resultadoALU = state.EX.regA.to_ulong() - state.EX.regB.to_ulong();              
-                    }
-                }
-                else{
-                    newState.MEM.resultadoALU = 0; //case of branch
-                }
-            }
-            else if (state.EX.tipo_I == 1){
-
-                newState.MEM.resultadoALU = state.EX.regA.to_ulong() + sign_extend(state.EX.Immediate).to_ulong();
-            }
-            
-            newState.MEM.data_forwarding = state.EX.regB;
-            newState.MEM.rs = state.EX.rs;
-            newState.MEM.rt = state.EX.rt;            
-            newState.MEM.endereco = state.EX.endereco;              
-            newState.MEM.regWrite = state.EX.regWrite;           
-            newState.MEM.memRead = state.EX.memRead;
-            newState.MEM.memWrite = state.EX.memWrite;           
-        }
-        newState.MEM.nop = state.EX.nop;        
-        newState.MEM.INS = state.EX.INS;
+        if (clockAtual.IF.nop && clockAtual.ID.nop && clockAtual.EX.nop && clockAtual.MEM.nop && clockAtual.WB.nop)
+            break;
 
         //? Etapa ID ------------------------------------------------------------------------------------------------------------------
-        if (state.ID.nop == 0){
+        if (clockAtual.ID.nop == 0){
 
-            Instr = state.ID.instrucao;
-            opcode = Instr.to_string().substr(0,6);		//decode instruction
-            func = Instr.to_string().substr(26,6);
+            Instr = clockAtual.ID.instrucao;
+            opcode = Instr.to_string().substr(26,6);	
+            func = Instr.to_string().substr(0,6);
 
-            rs = bitset<5>(Instr.to_string().substr(6,5));
-            newState.EX.rs = rs;
-            newState.EX.regA = registradores[rs.to_ulong()];   
+            //cout << "instr: " << Instr << endl;
+            //cout << "opcode: " << opcode << endl;
+            //cout << "func: " << func << endl;
+            //cout << endl;
+
+            rs = bitset<5>(Instr.to_string().substr(21,5));
+            novoClock.EX.rs = rs;
+            novoClock.EX.regA = registradores[rs.to_ulong()];   
             
-            rt = bitset<5>(Instr.to_string().substr(11,5));
-            newState.EX.rt = rt;
-            newState.EX.regB = registradores[rt.to_ulong()];
+            rt = bitset<5>(Instr.to_string().substr(16,5));
+            novoClock.EX.rt = rt;
+            novoClock.EX.regB = registradores[rt.to_ulong()];
             
-            immediate = bitset<16>(Instr.to_string().substr(16,16)); 
-            newState.EX.Immediate = immediate;
+            immediate = bitset<16>(Instr.to_string().substr(0,16)); 
+            novoClock.EX.Immediate = immediate;
             
-            rd = bitset<5>(Instr.to_string().substr(16,5));  
+            rd = bitset<5>(Instr.to_string().substr(11,5));  
             
             if (opcode == "000000"){                 
-                newState.EX.endereco = rd; 
+                novoClock.EX.endereco = rd; 
                 
-                newState.EX.tipo_I = 0;
+                novoClock.EX.tipo_I = 0;
 
                 if(func == "100000"){
-                    newState.EX.INS = "add";
-                    newState.EX.aluOp = bitset<2>("10");
+                    cout << "add" << endl;
+                    novoClock.EX.nome = "add";
+                    novoClock.EX.aluOp = bitset<2>("10");
                 }
                 else{
                     if(func == "100010"){
-                        newState.EX.INS = "subtract";
-                        newState.EX.aluOp = bitset<2>("10");
+                        cout << "sub" << endl;
+                        novoClock.EX.nome = "subtract";
+                        novoClock.EX.aluOp = bitset<2>("10");
                     }
                     else{
                         if(func == "100100"){
-                            newState.EX.INS = "AND";
-                            newState.EX.aluOp = bitset<2>("10");
+                            cout << "and" << endl;
+                            novoClock.EX.nome = "AND";
+                            novoClock.EX.aluOp = bitset<2>("10");
                         }
                         else{
                             if(func == "100101"){
-                                newState.EX.INS = "OR";
-                                newState.EX.aluOp = bitset<2>("10");
+                                cout << "or" << endl;
+                                novoClock.EX.nome = "OR";
+                                novoClock.EX.aluOp = bitset<2>("10");
                             }
                             else{
                                 if(func == "101010"){
-                                    newState.EX.INS = "slt";
-                                    newState.EX.aluOp = bitset<2>("10");
+                                    cout << "slt" << endl;
+                                    novoClock.EX.nome = "slt";
+                                    novoClock.EX.aluOp = bitset<2>("10");
                                 }
                                 else{
-                                    newState.EX.INS = "sll";
-                                    newState.EX.aluOp = bitset<2>("10");
+                                    cout << "sll" << endl;
+                                    novoClock.EX.nome = "sll";
+                                    novoClock.EX.aluOp = bitset<2>("10");
                                 }
                             }
                         }
@@ -307,182 +295,269 @@ void pipeline(){
             }            
 
             else if (opcode == "100011"){
-                newState.EX.INS = "lw";                
+                novoClock.EX.nome = "lw";                
                 
-                newState.EX.endereco = rt;
+                novoClock.EX.endereco = rt;
                 
-                newState.EX.tipo_I = 1;               
-                newState.EX.aluOp = bitset<2>("01");
-                newState.EX.regWrite = 1;                
-                newState.EX.memRead = 1;
-                newState.EX.memWrite = 0;                      
+                novoClock.EX.tipo_I = 1;               
+                novoClock.EX.aluOp = bitset<2>("01");
+                novoClock.EX.regWrite = 1;                
+                novoClock.EX.memRead = 1;
+                novoClock.EX.memWrite = 0;                      
             }
 
             else if (opcode == "101011"){
-                newState.EX.INS = "sw";       
+                novoClock.EX.nome = "sw";       
                 
-                newState.EX.endereco = rt;
+                novoClock.EX.endereco = rt;
 
-                newState.EX.tipo_I = 1;                
-                newState.EX.aluOp = bitset<2>("01");;
-                newState.EX.regWrite = 0;                
-                newState.EX.memRead = 0;
-                newState.EX.memWrite = 1;                 
+                novoClock.EX.tipo_I = 1;                
+                novoClock.EX.aluOp = bitset<2>("01");;
+                novoClock.EX.regWrite = 0;                
+                novoClock.EX.memRead = 0;
+                novoClock.EX.memWrite = 1;                 
             }
             
             else if (opcode == "000100"){
-                newState.EX.INS = "beq";
+                novoClock.EX.nome = "beq";
                 
-                newState.EX.endereco = 0;
+                novoClock.EX.endereco = 0;
                 
-                newState.EX.tipo_I = 1;
-                newState.EX.aluOp = bitset<2>("01");;
-                newState.EX.regWrite = 0;
-                newState.EX.memRead = 0;
-                newState.EX.memWrite = 0; 
+                novoClock.EX.tipo_I = 1;
+                novoClock.EX.aluOp = bitset<2>("01");;
+                novoClock.EX.regWrite = 0;
+                novoClock.EX.memRead = 0;
+                novoClock.EX.memWrite = 0; 
 
                 bitset<32> aux1 = registradores[rs.to_ulong()];
                 bitset<32> aux2 = registradores[rt.to_ulong()];
                 
                 if (aux1 == aux2){
 
-                    cout<<"Branch not taken"<<endl;
-                    newState.EX.nop = 0;
-                    newState.ID.nop = 1;
+                    novoClock.EX.nop = 0;
+                    novoClock.ID.nop = 1;
                     
-                    newState.IF.PC = state.IF.PC.to_ulong() + bitset<30>(sign_extend(immediate).to_string().substr(2,30)).to_ulong()*4;
-                    newState.IF.nop = 0;
+                    novoClock.IF.PC = clockAtual.IF.PC.to_ulong() + bitset<30>(sign_extend(immediate).to_string().substr(2,30)).to_ulong()*4;
+                    novoClock.IF.nop = 0;
                     
-                    //printState(newState, cycle);     
-                    state = newState;
+                    //printclockAtual(novoClock, cycle);     
+                    clockAtual = novoClock;
                     cycle ++;
                     
                     continue;                                       
                 }
-                cout<<"Branch taken"<<endl;
             }
             else if (opcode == "001000"){
-                newState.EX.INS = "addi";
+                novoClock.EX.nome = "addi";
 
-                newState.EX.tipo_I = 1;
-                newState.EX.aluOp = bitset<2>("00");
-                newState.EX.regWrite = 1;
-                newState.EX.memRead = 0;
-                newState.EX.memWrite = 0; 
+                novoClock.EX.tipo_I = 1;
+                novoClock.EX.aluOp = bitset<2>("00");
+                novoClock.EX.regWrite = 1;
+                novoClock.EX.memRead = 0;
+                novoClock.EX.memWrite = 0; 
             }
             else if (opcode == "000101"){
-                newState.EX.INS = "bne";
+                novoClock.EX.nome = "bne";
                 
-                newState.EX.endereco = 0;
+                novoClock.EX.endereco = 0;
                 
-                newState.EX.tipo_I = 1;
-                newState.EX.aluOp = bitset<2>("01");;
-                newState.EX.regWrite = 0;
-                newState.EX.memRead = 0;
-                newState.EX.memWrite = 0; 
+                novoClock.EX.tipo_I = 1;
+                novoClock.EX.aluOp = bitset<2>("01");;
+                novoClock.EX.regWrite = 0;
+                novoClock.EX.memRead = 0;
+                novoClock.EX.memWrite = 0; 
 
                 bitset<32> aux1 = registradores[rs.to_ulong()];
                 bitset<32> aux2 = registradores[rt.to_ulong()];
                 
                 if (aux1 != aux2){
 
-                    cout<<"Branch not taken"<<endl;
-                    newState.EX.nop = 0;
-                    newState.ID.nop = 1;
+                    novoClock.EX.nop = 0;
+                    novoClock.ID.nop = 1;
                     
-                    newState.IF.PC = state.IF.PC.to_ulong() + bitset<30>(sign_extend(immediate).to_string().substr(2,30)).to_ulong()*4;
-                    newState.IF.nop = 0;
+                    novoClock.IF.PC = clockAtual.IF.PC.to_ulong() + bitset<30>(sign_extend(immediate).to_string().substr(2,30)).to_ulong()*4;
+                    novoClock.IF.nop = 0;
                     
-                    //printState(newState, cycle);     
-                    state = newState;
+                    //printclockAtual(novoClock, cycle);     
+                    clockAtual = novoClock;
                     cycle ++;
                     
                     continue;                                       
                 }
-                cout<<"Branch taken"<<endl;
             }
             else if (opcode == "000010"){
-                newState.EX.INS = "jump";
+                novoClock.EX.nome = "jump";
 
-                newState.EX.tipo_I = 0;
-                newState.EX.regWrite = 0;
-                newState.EX.memRead = 0;
-                newState.EX.memWrite = 0;
-
-                //newState.IF.PC = 
+                novoClock.EX.tipo_I = 0;
+                novoClock.EX.regWrite = 0;
+                novoClock.EX.memRead = 0;
+                novoClock.EX.memWrite = 0;
             }
             else if (opcode == "000011"){
-                newState.EX.INS = "jump and link";
+                novoClock.EX.nome = "jump and link";
 
-                newState.EX.tipo_I = 0;
-                newState.EX.regWrite = 0;
-                newState.EX.memRead = 0;
-                newState.EX.memWrite = 0;
-
-                //newState.IF.PC =
+                novoClock.EX.tipo_I = 0;
+                novoClock.EX.regWrite = 0;
+                novoClock.EX.memRead = 0;
+                novoClock.EX.memWrite = 0;
             }
             else {
-                newState.EX.INS = "jump register";
+                novoClock.EX.nome = "jump register";
 
-                newState.EX.tipo_I = 0;
-                newState.EX.regWrite = 0;
-                newState.EX.memRead = 0;
-                newState.EX.memWrite = 0;
-
-                //newState.IF.PC =
+                novoClock.EX.tipo_I = 0;
+                novoClock.EX.regWrite = 0;
+                novoClock.EX.memRead = 0;
+                novoClock.EX.memWrite = 0;
             } 
             
-            if ((state.EX.nop == 0) && (state.EX.memRead == 1)){
+            if ((clockAtual.EX.nop == 0) && (clockAtual.EX.memRead == 1)){
 
-                if ((state.EX.endereco == rs) || ((state.EX.endereco == rt) && (newState.EX.tipo_I == 0))){
+                if ((clockAtual.EX.endereco == rs) || ((clockAtual.EX.endereco == rt) && (novoClock.EX.tipo_I == 0))){
 
-                    newState.EX.nop = 1;
+                    novoClock.EX.nop = 1;
 
-                    newState.ID = state.ID;
-                    newState.IF = state.IF;
+                    novoClock.ID = clockAtual.ID;
+                    novoClock.IF = clockAtual.IF;
 
-                    //printState(newState, cycle);
-                    state = newState;
+                    //printclockAtual(novoClock, cycle);
+                    clockAtual = novoClock;
                     cycle ++;
                     cout<<"Stall"<<endl;
                     continue;
                 }  
             }
         }
-        newState.EX.nop = state.ID.nop;
+        novoClock.EX.nop = clockAtual.ID.nop;
 
-        //? Etapa IF ------------------------------------------------------------------------------------------------------------------
-        if (state.IF.nop == 0){
+        //? Etapa EX ------------------------------------------------------------------------------------------------------------------
+        if (clockAtual.EX.nop == 0)
+        {    
+            // Verifica se vai escrever em Rs               
+            if ((clockAtual.WB.nop == 0) && (clockAtual.WB.regWrite == 1) && (clockAtual.WB.endereco == clockAtual.EX.rs)){
 
-            //TODO cout<<"PC:\t"<<state.IF.PC<<endl;
-            Instruction = memoria[state.IF.PC.to_ulong()/4];          
-            //cout<<"Instruction:\t"<<Instruction<<endl;
-
-            if (Instruction != 0xffffffff){
-
-                newState.IF.PC = state.IF.PC.to_ulong() + 4;
-                newState.IF.nop = 0;                               
-            }
-            else{
-
-                state.IF.nop = 1;
-                
-                newState.IF.PC = state.IF.PC.to_ulong();                
-                newState.IF.nop = 1;
-                //cout<<"PC:\t"<<state.IF.PC<<endl;                
+                clockAtual.EX.regA = clockAtual.WB.info;
+                cout<<"MEM-EX Rs Forwarding"<<endl;
             }
             
-            newState.ID.instrucao = Instruction;            
-        }
-        newState.ID.nop = state.IF.nop;
+            // Verifica se vai escrever em Rt
+            if ((clockAtual.WB.nop == 0) && (clockAtual.WB.regWrite == 1) && (clockAtual.WB.endereco == clockAtual.EX.rt)){
 
+                if (((clockAtual.EX.tipo_I == 0) && (clockAtual.EX.regWrite == 1)) || (clockAtual.EX.memWrite == 1)){
+
+                    clockAtual.EX.regB = clockAtual.WB.info;
+                    cout<<"MEM-EX Rt Forwarding"<<endl;                
+                }
+            }
+            
+            
+            if ((clockAtual.MEM.nop == 0) && (clockAtual.MEM.memRead == 0) && (clockAtual.MEM.memWrite == 0) && (clockAtual.MEM.regWrite == 1) && (clockAtual.MEM.endereco == clockAtual.EX.rs)){ 
+
+                clockAtual.EX.regA = clockAtual.MEM.resultadoALU;
+                cout<<"EX-MEM Rs Forwarding"<<endl;
+            }
+            
+            
+            if ((clockAtual.MEM.nop == 0) && (clockAtual.MEM.memRead == 0) && (clockAtual.MEM.memWrite == 0) && (clockAtual.MEM.regWrite == 0) && (clockAtual.MEM.endereco == clockAtual.EX.rt)){
+
+                if ((clockAtual.EX.tipo_I == 0) && (clockAtual.EX.regWrite == 1)){
+
+                    clockAtual.EX.regB = clockAtual.MEM.resultadoALU;
+                    cout<<"EX-MEM Rt Forwarding"<<endl; 
+                }
+            }            
+            
+            if (clockAtual.EX.tipo_I == 0){
+
+                if (clockAtual.EX.regWrite == 1){
+
+                    if (clockAtual.EX.aluOp == 1){
+
+                        novoClock.MEM.resultadoALU = clockAtual.EX.regA.to_ulong() + clockAtual.EX.regB.to_ulong();               
+                    }
+                    else if (clockAtual.EX.aluOp == 0){
+
+                        novoClock.MEM.resultadoALU = clockAtual.EX.regA.to_ulong() - clockAtual.EX.regB.to_ulong();              
+                    }
+                }
+                else{
+                    novoClock.MEM.resultadoALU = 0; //case of branch
+
+                    if(opcode == "000010"){
+                        cout << "Jump" << endl;
+                        novoClock.IF.PC = bitset<32>(rd.to_string());
+                    }
+                    else{
+                        if(opcode == "000011"){
+                            cout << "Jump and link" << endl;
+                            registradores[31] = bitset<32>(clockAtual.IF.PC.to_ulong() + 8);
+                            novoClock.IF.PC = bitset<32>(rd.to_string());
+                        }
+                        else{
+                            if(opcode == "100000"){
+                                cout << "Jump register" << endl;
+                                novoClock.IF.PC = registradores[rs.to_ulong()];
+                            }
+                        }
+                    }
+                }
+            }
+            else if (clockAtual.EX.tipo_I == 1){
+
+                novoClock.MEM.resultadoALU = clockAtual.EX.regA.to_ulong() + sign_extend(clockAtual.EX.Immediate).to_ulong();
+            }
+            
+            novoClock.MEM.data_forwarding = clockAtual.EX.regB;
+            novoClock.MEM.rs = clockAtual.EX.rs;
+            novoClock.MEM.rt = clockAtual.EX.rt;            
+            novoClock.MEM.endereco = clockAtual.EX.endereco;              
+            novoClock.MEM.regWrite = clockAtual.EX.regWrite;           
+            novoClock.MEM.memRead = clockAtual.EX.memRead;
+            novoClock.MEM.memWrite = clockAtual.EX.memWrite;           
+        }
+        novoClock.MEM.nop = clockAtual.EX.nop;        
+        novoClock.MEM.nome = clockAtual.EX.nome;
+
+        //? Etapa MEM ------------------------------------------------------------------------------------------------------------------
+        if (clockAtual.MEM.nop == 0){
+            if (clockAtual.MEM.memRead == 1){
+
+                novoClock.WB.info = bitset<32>(memoria[clockAtual.MEM.resultadoALU.to_ulong()]);
+                cout << "novoClock.WB.info: " << novoClock.WB.info << endl;
+                cout << "memoria[clockAtual.MEM.resultadoALU.to_ulong()]: " << memoria[clockAtual.MEM.resultadoALU.to_ulong()];
+            }
+            else if (clockAtual.MEM.memWrite == 1){
+
+                if ((clockAtual.WB.nop == 0) && (clockAtual.WB.regWrite == 1) && (clockAtual.WB.endereco == clockAtual.MEM.rt)){
+
+                    clockAtual.MEM.data_forwarding = clockAtual.WB.info;    
+                    cout<<"MEM-MEM sw Forwarding"<<endl;
+                }
+                
+                memoria[clockAtual.MEM.resultadoALU.to_ulong()] = bitset<32>(clockAtual.MEM.data_forwarding.to_string());
+
+                novoClock.WB.info = clockAtual.MEM.data_forwarding;
+            }
+            else if (clockAtual.MEM.regWrite == 1){
+
+                novoClock.WB.info = clockAtual.MEM.resultadoALU;
+            }   
+
+            novoClock.WB.rs = clockAtual.MEM.rs;
+            novoClock.WB.rt = clockAtual.MEM.rt;             
+            novoClock.WB.endereco = clockAtual.MEM.endereco;                      
+            novoClock.WB.regWrite = clockAtual.MEM.regWrite;             
+        }
+        novoClock.WB.nop = clockAtual.MEM.nop;  
+        novoClock.WB.nome = clockAtual.MEM.nome;
+
+        //? Etapa WB ------------------------------------------------------------------------------------------------------------------
+        if (clockAtual.WB.nop == 0){
+            if (1 == clockAtual.WB.regWrite){
+                registradores[clockAtual.WB.endereco.to_ulong()] = clockAtual.WB.info; 
+            }         
+        }
         
-        if (state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop)
-            break;
-        
-        //printState(newState, cycle);
-       
-        state = newState;
+        imprimePipeLine(clockAtual);
                 
         cycle ++;
     }
