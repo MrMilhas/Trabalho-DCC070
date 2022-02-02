@@ -473,10 +473,10 @@ int main()
         switch (controle.RegDst)
         {
         case 0:
-            indexEscrita = reg3m0;
+            indexEscrita = reg3m0; // reg3m0 == rd;
             break;
         case 1:
-            indexEscrita = reg3m1;
+            indexEscrita = reg3m1; // reg3m1 == rt;
             break;
         case 2:
             indexEscrita = 31;

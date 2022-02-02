@@ -50,6 +50,7 @@ void menu(){
         cout << endl;
 
         int escolha;
+        int escolha2;
 
         cout << "Escolha: " << endl;
         cin >> escolha;
@@ -61,25 +62,67 @@ void menu(){
             cout << endl;
         }
         else{
+            
+            // Inicializando vetor de memoria;
+            for(int i=0; i<512; i++){
+                memoria[i] = bitset<32>(1);
+            }
+
+            // Inicializando veotr de registradores;
+            for(int i=0; i<32; i++){
+                registradores[i] = bitset<32>(1);
+            }
+
             if(escolha == 1){
                 string dir;
                 cout << "Digite o diretório do arquivo contendo as informações: " << endl;
                 cin >> dir;
 
                 if(!verificaDir(dir)){
-                    cout << "Iniciando criação automática do arquivo: " << endl;
+                    cout << "ERRO: Diretório não encontrado." << endl;
+                    continua = false;
                 }
                 else{
+                    cout << "Iniciando leitura do arquivo: " << endl;
                     fstream arq(dir+"/instrucoes.txt", ios::in);
                     lerArquivo(arq, memoria);
+                    cout << "Arquivo lido com sucesso. Memória de instruções atualizada." << endl;
+                    cout << "___________________________________________________________" << endl;
+                    arq.close();
+                    
+                    cout << "Escolha o modo de execução: " << endl;
+                    cout << "       1 - Seriada." << endl;
+                    cout << "       2 - Direta." << endl;
+                    cout << endl;
+                    cout<< "Escolha: " << endl;
+                    cin >> escolha2;
+                    cout << endl;
+
+                    pipeline();
                     
                 }
             }
 
             if(escolha == 2){
                 string bits;
-                cout << "Digite os bits de informação para a execução da intrução: " << endl;
-                cin >> bits;
+                cout << "Digite as instruções que deseja executar: " << endl;
+
+                int opcao = 1;
+                while(opcao == 1){
+                    cin >> bits;
+
+                    cout << "Deseja digitar mais uma instrução? " << endl;
+                    cout << "   1 - Digitar." << endl;
+                    cout << "   2 - Parar." << endl;
+                    cout << "Opção: " << endl;
+                    cin >> opcao;
+                    cout << endl; 
+                }
+
+                cout << "Valores lidos com sucesso. Memória de instruções atualizada." << endl;
+                cout << "___________________________________________________________" << endl;
+
+                pipeline();
             }
 
             if(escolha == 0){
@@ -97,8 +140,6 @@ void menu(){
  * @return int 0.
  */
 int main(){
-
     
-	return 0;
-
+   menu();
 }
