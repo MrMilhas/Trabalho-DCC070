@@ -17,8 +17,8 @@ bitset<32> registradores[32]; //Array que contem em cada posicao um registrador,
 //? Inicia no ciclo de clock 0;
 int cycle;
 
-bitset<32> sign_extend(bitset<16> Imm)
-{
+bitset<32> extensorSinal(bitset<16> Imm){
+
     string se0 = "0000000000000000";
     string se1 = "1111111111111111";
     string immediate = Imm.to_string();
@@ -94,8 +94,13 @@ struct ciclo {
 };
 
 //?------------------------------------------------------------------------------------------------------------------------------------
-void imprimePipeLine(ciclo clockAtual){
-    ofstream outfile ("outfile.txt");
+/**
+ * @brief Função utilizada para imprimir as etapas do pipeline em um arquivo de saída.
+ * 
+ * @param outfile     Arquivo de saída.
+ * @param clockAtual  Clock para exibição das conformações.
+ */
+void imprimePipeLine(ofstream &outfile, ciclo clockAtual){
 
     outfile << "Ciclo de clock atual: " << cycle << endl;
     outfile << "Conteúdo do Banco de Registradores: " << endl;
@@ -106,54 +111,44 @@ void imprimePipeLine(ciclo clockAtual){
     }
     outfile << endl;
 
-    //if(clockAtual.IF.nop == 0){
-        outfile << "PC: " << clockAtual.IF.PC << endl;
-        outfile << endl;
-    //}
+    outfile << "------------- Etapa IF (Leitura da Instrução) ------------- " << endl;
+    outfile << "PC: " << clockAtual.IF.PC << endl;
+    outfile << endl;
 
-    //if(clockAtual.ID.nop == 0){
-        outfile << "------------- Etapa ID (Decodificação da Instrução) ------------- " << endl;
-        outfile << "Instrução: " << clockAtual.ID.instrucao << endl;
-        outfile << endl;
-    //}
+    outfile << "------------- Etapa ID (Decodificação da Instrução) ------------- " << endl;
+    outfile << "Instrução: " << clockAtual.ID.instrucao << endl;
+    outfile << endl;
 
-    //if(clockAtual.EX.nop == 0){
-        outfile << "------------- Etapa EX (Execução/Cálculo do Endereço) ------------- " << endl;
-        outfile << "Instrução: " << clockAtual.EX.nome << endl;
-        outfile << "Rs: " << clockAtual.EX.rs << endl;
-        outfile << "Rt: " << clockAtual.EX.rt << endl;
-        outfile << "Rd: " << clockAtual.EX.endereco << endl;
-        outfile << "MemRead: " << clockAtual.EX.memRead << endl;
-        outfile << "MemWrite: " << clockAtual.EX.memWrite << endl;
-        outfile << "Aluop: " << clockAtual.EX.aluOp << endl;
-        outfile << "RegWrite: " << clockAtual.EX.regWrite << endl;
-        outfile << endl;
-    //}
+    outfile << "------------- Etapa EX (Execução/Cálculo do Endereço) ------------- " << endl;
+    outfile << "Instrução: " << clockAtual.EX.nome << endl;
+    outfile << "Rs: " << clockAtual.EX.rs << endl;
+    outfile << "Rt: " << clockAtual.EX.rt << endl;
+    outfile << "Rd: " << clockAtual.EX.endereco << endl;
+    outfile << "MemRead: " << clockAtual.EX.memRead << endl;
+    outfile << "MemWrite: " << clockAtual.EX.memWrite << endl;
+    outfile << "Aluop: " << clockAtual.EX.aluOp << endl;
+    outfile << "RegWrite: " << clockAtual.EX.regWrite << endl;
+    outfile << endl;
 
-    //if(clockAtual.MEM.nop == 0){
-        outfile << "------------- Etapa MEM (Acesso à Memória de Dados) ------------- " << endl;
-        outfile << "Instrução: " << clockAtual.MEM.nome << endl;
-        outfile << "Rs: " << clockAtual.MEM.rs << endl;
-        outfile << "Rt: " << clockAtual.MEM.rt << endl;
-        outfile << "Rd: " << clockAtual.MEM.endereco << endl;
-        outfile << "MemRead: " << clockAtual.MEM.memRead << endl;
-        outfile << "MemWrite: " << clockAtual.MEM.memWrite << endl;
-        outfile << "RegWrite: " << clockAtual.MEM.regWrite << endl;
-        outfile << endl;
-    //}
+    outfile << "------------- Etapa MEM (Acesso à Memória de Dados) ------------- " << endl;
+    outfile << "Instrução: " << clockAtual.MEM.nome << endl;
+    outfile << "Rs: " << clockAtual.MEM.rs << endl;
+    outfile << "Rt: " << clockAtual.MEM.rt << endl;
+    outfile << "Rd: " << clockAtual.MEM.endereco << endl;
+    outfile << "MemRead: " << clockAtual.MEM.memRead << endl;
+    outfile << "MemWrite: " << clockAtual.MEM.memWrite << endl;
+    outfile << "RegWrite: " << clockAtual.MEM.regWrite << endl;
+    outfile << endl;
 
-    //if(clockAtual.WB.nop == 0){
-        outfile << "------------- Etapa WB (Escrita do Resultado) ------------- " << endl;
-        outfile << "Instrução: " << clockAtual.WB.nome << endl;
-        outfile << "Rs: " << clockAtual.WB.rs << endl;
-        outfile << "Rt: " << clockAtual.WB.rt << endl;
-        outfile << "Rd: " << clockAtual.WB.endereco << endl;
-        outfile << "RegWrite: " << clockAtual.WB.regWrite << endl;
-        outfile << endl;
-    //}
+    outfile << "------------- Etapa WB (Escrita do Resultado) ------------- " << endl;
+    outfile << "Instrução: " << clockAtual.WB.nome << endl;
+    outfile << "Rs: " << clockAtual.WB.rs << endl;
+    outfile << "Rt: " << clockAtual.WB.rt << endl;
+    outfile << "Rd: " << clockAtual.WB.endereco << endl;
+    outfile << "RegWrite: " << clockAtual.WB.regWrite << endl;
+    outfile << endl;
 
     outfile << "___________________________________________________________________________________________" << endl;
-    outfile.close();
 }
 
 
@@ -161,9 +156,7 @@ void imprimePipeLine(ciclo clockAtual){
 
 void pipeline(){
 
-    //opcao = 1;
-
-    //memoria[0] = bitset<32>(bits);
+    ofstream outfile ("outfile.txt");
     
     //? Inicializando etapas do pipeline com seus respectivos sinais de controle;
     etapaIF IF = {0, 0};                                              // Nop == 0 para iniciar a primeira instrução;
@@ -177,15 +170,12 @@ void pipeline(){
     etapaWB WB = {0, 0, 0, 0, 0, 1, "Indefinida"};                    // Nop == 1 para iniciar a primeira instrução;
 
     //? Inicializando estrutura de auxílio para as etapas do pipeline;
-    //clockAtualStruct clockAtual = {IF, ID, EX, MEM, WB};  
-    //clockAtualStruct novoClock = clockAtual;
-
     ciclo clockAtual = {IF, ID, EX, MEM, WB};
     ciclo novoClock = clockAtual;
     
     //? Declarando variáveis auxiliares para etapas do pipeline;
 	bitset<32> Instruction;        // Variável para armazenar a instrução;
-	bitset<32> Instr;              // Variável auxiliar para instrução;
+	bitset<32> Ins;                // Variável auxiliar para instrução;
 	string opcode;                 // Opcode da instrução;
 	string func;                   // Campo Func;
 	bitset<5> rs;                  // Registrador rs;
@@ -200,14 +190,16 @@ void pipeline(){
 
         //? Etapa IF ------------------------------------------------------------------------------------------------------------------
         if (clockAtual.IF.nop == 0){
-
+            // Lendo instrução da memória;
             Instruction = memoria[clockAtual.IF.PC.to_ulong()/4];         
 
+            // Se a instrução for diferente de zero, atualiza PC;
             if (Instruction != 0){
 
                 novoClock.IF.PC = clockAtual.IF.PC.to_ulong() + 4;
                 novoClock.IF.nop = 0;                               
             }
+            // Caso contrário, no = 1;
             else{
 
                 clockAtual.IF.nop = 1;
@@ -215,40 +207,41 @@ void pipeline(){
                 novoClock.IF.PC = clockAtual.IF.PC.to_ulong();                
                 novoClock.IF.nop = 1;                
             }
-            
+            // Passando a instrução para a próxima etapa;
             novoClock.ID.instrucao = Instruction;            
         }
+        // Atualizando ciclo;
         novoClock.ID.nop = clockAtual.IF.nop;
         clockAtual = novoClock;
 
+        // Se todos os nop forem iguais a 1, encerra o pipeline;
         if (clockAtual.IF.nop && clockAtual.ID.nop && clockAtual.EX.nop && clockAtual.MEM.nop && clockAtual.WB.nop)
             break;
 
         //? Etapa ID ------------------------------------------------------------------------------------------------------------------
         if (clockAtual.ID.nop == 0){
+            
+            // Atualizando variáveis para decodificação;
+            Ins = clockAtual.ID.instrucao;
+            opcode = Ins.to_string().substr(26,6);	
+            func = Ins.to_string().substr(0,6);
 
-            Instr = clockAtual.ID.instrucao;
-            opcode = Instr.to_string().substr(26,6);	
-            func = Instr.to_string().substr(0,6);
-
-            //cout << "instr: " << Instr << endl;
-            //cout << "opcode: " << opcode << endl;
-            //cout << "func: " << func << endl;
-            //cout << endl;
-
-            rs = bitset<5>(Instr.to_string().substr(21,5));
+            // Atualizando registradores rs, rt, rd e immediate;
+            rs = bitset<5>(Ins.to_string().substr(21,5));
             novoClock.EX.rs = rs;
             novoClock.EX.regA = registradores[rs.to_ulong()];   
             
-            rt = bitset<5>(Instr.to_string().substr(16,5));
+            rt = bitset<5>(Ins.to_string().substr(16,5));
             novoClock.EX.rt = rt;
             novoClock.EX.regB = registradores[rt.to_ulong()];
             
-            immediate = bitset<16>(Instr.to_string().substr(0,16)); 
+            immediate = bitset<16>(Ins.to_string().substr(0,16)); 
             novoClock.EX.Immediate = immediate;
             
-            rd = bitset<5>(Instr.to_string().substr(11,5));  
+            rd = bitset<5>(Ins.to_string().substr(11,5));  
             
+            // Verificando opcodes;
+            // Caso opcode == 000000, a instrução é do tipo R, será necessário verificar o func;
             if (opcode == "000000"){                 
                 novoClock.EX.endereco = rd; 
                 
@@ -337,10 +330,9 @@ void pipeline(){
                     novoClock.EX.nop = 0;
                     novoClock.ID.nop = 1;
                     
-                    novoClock.IF.PC = clockAtual.IF.PC.to_ulong() + bitset<30>(sign_extend(immediate).to_string().substr(2,30)).to_ulong()*4;
+                    novoClock.IF.PC = clockAtual.IF.PC.to_ulong() + bitset<30>(extensorSinal(immediate).to_string().substr(2,30)).to_ulong()*4;
                     novoClock.IF.nop = 0;
-                    
-                    //printclockAtual(novoClock, cycle);     
+                         
                     clockAtual = novoClock;
                     cycle ++;
                     
@@ -375,10 +367,9 @@ void pipeline(){
                     novoClock.EX.nop = 0;
                     novoClock.ID.nop = 1;
                     
-                    novoClock.IF.PC = clockAtual.IF.PC.to_ulong() + bitset<30>(sign_extend(immediate).to_string().substr(2,30)).to_ulong()*4;
+                    novoClock.IF.PC = clockAtual.IF.PC.to_ulong() + bitset<30>(extensorSinal(immediate).to_string().substr(2,30)).to_ulong()*4;
                     novoClock.IF.nop = 0;
-                    
-                    //printclockAtual(novoClock, cycle);     
+                        
                     clockAtual = novoClock;
                     cycle ++;
                     
@@ -419,10 +410,8 @@ void pipeline(){
                     novoClock.ID = clockAtual.ID;
                     novoClock.IF = clockAtual.IF;
 
-                    //printclockAtual(novoClock, cycle);
                     clockAtual = novoClock;
                     cycle ++;
-                    cout<<"Stall"<<endl;
                     continue;
                 }  
             }
@@ -432,37 +421,33 @@ void pipeline(){
         //? Etapa EX ------------------------------------------------------------------------------------------------------------------
         if (clockAtual.EX.nop == 0)
         {    
-            // Verifica se vai escrever em Rs               
+            // Verifica se existe hazzard;               
             if ((clockAtual.WB.nop == 0) && (clockAtual.WB.regWrite == 1) && (clockAtual.WB.endereco == clockAtual.EX.rs)){
 
                 clockAtual.EX.regA = clockAtual.WB.info;
-                cout<<"MEM-EX Rs Forwarding"<<endl;
             }
             
-            // Verifica se vai escrever em Rt
+            // Verifica se existe hazzard;
             if ((clockAtual.WB.nop == 0) && (clockAtual.WB.regWrite == 1) && (clockAtual.WB.endereco == clockAtual.EX.rt)){
 
                 if (((clockAtual.EX.tipo_I == 0) && (clockAtual.EX.regWrite == 1)) || (clockAtual.EX.memWrite == 1)){
 
-                    clockAtual.EX.regB = clockAtual.WB.info;
-                    cout<<"MEM-EX Rt Forwarding"<<endl;                
+                    clockAtual.EX.regB = clockAtual.WB.info;               
                 }
             }
             
-            
+            // Verifica se existe hazzard;
             if ((clockAtual.MEM.nop == 0) && (clockAtual.MEM.memRead == 0) && (clockAtual.MEM.memWrite == 0) && (clockAtual.MEM.regWrite == 1) && (clockAtual.MEM.endereco == clockAtual.EX.rs)){ 
 
                 clockAtual.EX.regA = clockAtual.MEM.resultadoALU;
-                cout<<"EX-MEM Rs Forwarding"<<endl;
             }
             
-            
+            // Verifica se existe hazzard;
             if ((clockAtual.MEM.nop == 0) && (clockAtual.MEM.memRead == 0) && (clockAtual.MEM.memWrite == 0) && (clockAtual.MEM.regWrite == 0) && (clockAtual.MEM.endereco == clockAtual.EX.rt)){
 
                 if ((clockAtual.EX.tipo_I == 0) && (clockAtual.EX.regWrite == 1)){
 
                     clockAtual.EX.regB = clockAtual.MEM.resultadoALU;
-                    cout<<"EX-MEM Rt Forwarding"<<endl; 
                 }
             }            
             
@@ -480,7 +465,7 @@ void pipeline(){
                     }
                 }
                 else{
-                    novoClock.MEM.resultadoALU = 0; //case of branch
+                    novoClock.MEM.resultadoALU = 0;
 
                     if(opcode == "000010"){
                         cout << "Jump" << endl;
@@ -502,8 +487,7 @@ void pipeline(){
                 }
             }
             else if (clockAtual.EX.tipo_I == 1){
-
-                novoClock.MEM.resultadoALU = clockAtual.EX.regA.to_ulong() + sign_extend(clockAtual.EX.Immediate).to_ulong();
+                novoClock.MEM.resultadoALU = clockAtual.EX.regA.to_ulong() + extensorSinal(clockAtual.EX.Immediate).to_ulong();
             }
             
             novoClock.MEM.data_forwarding = clockAtual.EX.regB;
@@ -522,15 +506,13 @@ void pipeline(){
             if (clockAtual.MEM.memRead == 1){
 
                 novoClock.WB.info = bitset<32>(memoria[clockAtual.MEM.resultadoALU.to_ulong()]);
-                cout << "novoClock.WB.info: " << novoClock.WB.info << endl;
-                cout << "memoria[clockAtual.MEM.resultadoALU.to_ulong()]: " << memoria[clockAtual.MEM.resultadoALU.to_ulong()];
             }
             else if (clockAtual.MEM.memWrite == 1){
 
+                // Verifica se existe hazzard;
                 if ((clockAtual.WB.nop == 0) && (clockAtual.WB.regWrite == 1) && (clockAtual.WB.endereco == clockAtual.MEM.rt)){
 
                     clockAtual.MEM.data_forwarding = clockAtual.WB.info;    
-                    cout<<"MEM-MEM sw Forwarding"<<endl;
                 }
                 
                 memoria[clockAtual.MEM.resultadoALU.to_ulong()] = bitset<32>(clockAtual.MEM.data_forwarding.to_string());
@@ -538,7 +520,6 @@ void pipeline(){
                 novoClock.WB.info = clockAtual.MEM.data_forwarding;
             }
             else if (clockAtual.MEM.regWrite == 1){
-
                 novoClock.WB.info = clockAtual.MEM.resultadoALU;
             }   
 
@@ -556,9 +537,8 @@ void pipeline(){
                 registradores[clockAtual.WB.endereco.to_ulong()] = clockAtual.WB.info; 
             }         
         }
-        
-        imprimePipeLine(clockAtual);
-                
+        imprimePipeLine(outfile, novoClock);      
         cycle ++;
     }
+    outfile.close();
 }

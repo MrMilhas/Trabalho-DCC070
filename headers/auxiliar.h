@@ -46,10 +46,10 @@ void lerArquivo(fstream &arq, bitset<32> memoria[] ){
     arq.seekg(0);  // Posicionando ponteiro no início do arquivo;
 
     // Enquanto houver linhas, captura essas linhas;
-    while(i < 4){
-        getline(arq, aux);              // Captura a linha e armazena em aux;
-
-        memoria[i] = converteBin(aux);  // Armazena o valor convertido no vetor memória;
+    while(getline(arq, aux)){
+                      // Captura a linha e armazena em aux;
+        cout << aux << endl;
+        memoria[i] = bitset<32>(aux);  // Armazena o valor convertido no vetor memória;
         i++;
     }
 }
