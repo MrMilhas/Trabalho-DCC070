@@ -16,7 +16,7 @@ using namespace std;
  * @return false  Retorna false se o arquivo não existir.
  */
 bool verificaDir(string dir){
-    cout << "Iniciando verificação do diretório:" << endl;
+    cout << "Iniciando verificacao do diretorio:" << endl;
     cout << endl;
 
     string dirArq = dir + "/instrucoes.txt";
@@ -24,7 +24,7 @@ bool verificaDir(string dir){
     ifstream arq(dirArq, ios::in);
 
     if(!arq.is_open()){
-        cout << "O arquivo 'instrucoes.txt' ainda não existe." << endl;
+        cout << "O arquivo 'instrucoes.txt' ainda nao existe." << endl;
         cout << endl;
         return 0;
     }
@@ -43,9 +43,9 @@ void menu(){
     bool continua = true;
 
     while(continua){
-        cout << "Digite uma das opções: " << endl;
-        cout << "   1 - Leitura dos bits de informação do arquivo." << endl;
-        cout << "   2 - Passagem dos bits de informação por teclado." << endl;
+        cout << "Digite uma das opcoes: " << endl;
+        cout << "   1 - Leitura dos bits de informacao do arquivo." << endl;
+        cout << "   2 - Passagem dos bits de informacao por teclado." << endl;
         cout << "   0 - Para sair do programa." << endl;
         cout << endl;
 
@@ -58,7 +58,7 @@ void menu(){
         cout << endl;
 
         if(escolha != 1 && escolha != 2 && escolha != 0){
-            cout << "Digite um valor válido." << endl;
+            cout << "Digite um valor valido." << endl;
             cout << endl;
         }
         else{
@@ -75,22 +75,22 @@ void menu(){
 
             if(escolha == 1){
                 string dir;
-                cout << "Digite o diretório do arquivo contendo as informações: " << endl;
+                cout << "Digite o diretorio do arquivo contendo as informacoes: " << endl;
                 cin >> dir;
 
                 if(!verificaDir(dir)){
-                    cout << "ERRO: Diretório não encontrado." << endl;
+                    cout << "ERRO: Diretorio nao encontrado." << endl;
                     continua = false;
                 }
                 else{
                     cout << "Iniciando leitura do arquivo: " << endl;
                     fstream arq(dir+"/instrucoes.txt", ios::in);
                     lerArquivo(arq, memoria);
-                    cout << "Arquivo lido com sucesso. Memória de instruções atualizada." << endl;
+                    cout << "Arquivo lido com sucesso. Memoria de instruções atualizada." << endl;
                     cout << "___________________________________________________________" << endl;
                     arq.close();
                     
-                    cout << "Escolha o modo de execução: " << endl;
+                    cout << "Escolha o modo de execucaoo: " << endl;
                     cout << "       1 - Seriada." << endl;
                     cout << "       2 - Direta." << endl;
                     cout << endl;
@@ -105,13 +105,13 @@ void menu(){
 
             if(escolha == 2){
                 string bits;
-                cout << "Digite as instruções que deseja executar: " << endl;
+                cout << "Digite as instrucoes que deseja executar: " << endl;
 
                 int opcao = 1;
                 while(opcao == 1){
                     cin >> bits;
 
-                    cout << "Deseja digitar mais uma instrução? " << endl;
+                    cout << "Deseja digitar mais uma instrucao? " << endl;
                     cout << "   1 - Digitar." << endl;
                     cout << "   2 - Parar." << endl;
                     cout << "Opção: " << endl;
@@ -119,8 +119,16 @@ void menu(){
                     cout << endl; 
                 }
 
-                cout << "Valores lidos com sucesso. Memória de instruções atualizada." << endl;
+                cout << "Valores lidos com sucesso. Memoria de instrucoes atualizada." << endl;
                 cout << "___________________________________________________________" << endl;
+
+                cout << "Escolha o modo de execucao: " << endl;
+                    cout << "       1 - Seriada." << endl;
+                    cout << "       2 - Direta." << endl;
+                    cout << endl;
+                    cout<< "Escolha: " << endl;
+                    cin >> escolha2;
+                    cout << endl;
 
                 pipeline();
             }
